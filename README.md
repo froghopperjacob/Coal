@@ -4,7 +4,7 @@
 		<img src="https://img.shields.io/badge/License-GNU%203.0-brightgreen.svg?style=flat-square" alt="Lisence" />
 	</a>
 	<a href="https://github.com/froghopperjacob/Coal/releases">
-		<img src="https://img.shields.io/github/v/release/froghopperjacob/Coal?style=flat-square" alt="Release" />
+		<img src="https://img.shields.io/github/v/release/froghopperjacob/Coal?include_prereleases&style=flat-square" alt="Release" />
 	</a>
 </div>
 
