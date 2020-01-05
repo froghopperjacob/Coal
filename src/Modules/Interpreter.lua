@@ -11,7 +11,13 @@ return function()
 		local ty = node["token"]["data"]
 		
 		if (ty ==  "+") then
-			return self:visit(node["left"], scope) + self:visit(node["right"], scope)
+			local left, right = self:visit(node["left"], scope), self:visit(node["right"], scope)
+			
+			if (typeof(left) == "string") then
+				return left .. tostring(right)
+			else
+				return left + right
+			end
 		elseif (ty == "-") then
 			return self:visit(node["left"], scope) - self:visit(node["right"], scope)
 		elseif (ty == "*") then
@@ -23,6 +29,16 @@ return function()
 		elseif (ty == "%") then
 			return self:visit(node["left"], scope) % self:visit(node["right"], scope)
 		end
+	end
+	
+	Class.visitArray = function(self, node, scope)
+		local elements = {}
+		
+		for i = 1, #node["elements"] do
+			table.insert(elements, self:visit(node["elements"][i], scope))
+		end
+		
+		return elements
 	end
 	
 	Class.visitFor = function(self, node, scope)
@@ -63,9 +79,27 @@ return function()
 		return self:visit(node["expression"], scope)
 	end
 	
-	Class.visitCreateFunction = function(self, node, scope)
-		-- [[ TODO custom scopes ]] --
+	Class.visitList = function(self, node, scope)
+		local elements = {}
 		
+		for i = 1, #node["elements"] do
+			local variableName, data = node["elements"][i]["left"]["data"], self:visit(node["elements"][i]["right"], scope)
+			
+			elements[variableName] = data
+		end
+		
+		return elements
+	end
+	
+	Class.visitPass = function(self, node, scope)
+		return node["token"]["data"]
+	end
+	
+	Class.visitAccess = function(self, node, scope)		
+		return self:visit(node["variable"], scope)[self:visit(node["access"], scope)]
+	end
+	
+	Class.visitCreateFunction = function(self, node, scope)		
 		local func = function(...)
 			local id, gargs = self:getId("FUNCTION"), { ... }
 		
@@ -83,21 +117,81 @@ return function()
 				end
 			end
 		end
-	
+		
 		scope[node["token"]["data"]] = func
- 
+
 		return func
+	end
+
+	Class.visitNew = function(self, node, scope)
+		local className = node["class"]["data"]
+		local class = self.classes[className]
+		
+		if (class) then
+			local sendargs = {}
+			
+			for i = 1, #node["arguments"] do
+				table.insert(sendargs, self:visit(node["arguments"][i], scope))
+			end
+			
+			local cClass = self:visit(class, scope)
+		
+			if (rawget(cClass, className)) then
+				rawget(cClass, className)(unpack(sendargs))
+			end
+		
+			return cClass
+		else
+			local sendargs = {}
+			
+			for i = 1, #node["arguments"] do
+				table.insert(sendargs, self:visit(node["arguments"][i], scope))
+			end
+			
+			return scope[className](scope[className], unpack(sendargs))
+		end
 	end
 	
 	Class.visitCallFunction = function(self, node, scope)
-		-- [[ Todo add default langauge functions and stop the hack im using ]] --
-		local args = { }
-				
-		for i = 1, #node["arguments"] do
+		local args, func, check = { }, self:visit(node["variable"], scope), self.sendScope[node["variable"]["data"]] ~= false
+								
+		if (node["type"] ~= "created" and check) then
+			table.insert(args, scope)
+		end
+						
+		for i = 1, #node["arguments"] do						
 			table.insert(args, self:visit(node["arguments"][i], scope))
 		end
+						
+		return func(unpack(args))
+	end
+	
+	Class.visitClass = function(self, node, scope)
+		local className = node["token"]["data"]
+				
+		self.scopes[className] = self:generateScope(className, scope["NAME"])		
+		self.scopes[className]["this"] = self.scopes[className]
 		
-		return scope[node["token"]["data"]](unpack(args))
+		if (node["extends"]) then			
+			local data = self:visit(self.classes[node["extends"]], self.scopes[className])
+			
+			self.scopes[className]["super"] = data
+		end
+		
+		for index = 1, #node["statements"] do
+			self:visit(node["statements"][index], self.scopes[className])
+		end
+		
+		if (className == "Main" and self.scopes["GLOBAL"]["Main"] == nil) then
+			self.scopes[className]["main"]()
+		end
+		
+		if (self.scopes["GLOBAL"][className] == nil) then
+			self.scopes["GLOBAL"][className] = self.scopes[className]
+			self.classes[className] = node
+		end
+		
+		return self.scopes[className]
 	end
 	
 	Class.visitUnary = function(self, node, scope)
@@ -112,23 +206,27 @@ return function()
 	
 	Class.visitAssign = function(self, node, scope)
 		local variableName, data = node["left"]["data"], self:visit(node["right"], scope)
-		
-		local function trySet(sco)			
+				
+		local function trySet(sco)						
 			if (sco["PARENT"] ~= nil) then
 				self.scopes[sco["PARENT"]][variableName] = data
-			
-				trySet(sco)
+						
+				trySet(sco["PARENT"])
 			end
 		end
-		
+				
 		if (node["type"]["data"] == "edit") then
-			if (not scope[variableName]) then
-				return error("Syntax Error")
+			if (node["left"]["nodeType"] == "Variable") then
+				if (scope[variableName] == nil) then
+					return error("Syntax Error")
+				end
+				
+				scope[variableName] = data
+				
+				trySet(scope)
+			else							
+				self:visit(node["left"]["variable"], scope)[self:visit(node["left"]["access"], scope)] = data
 			end
-			
-			scope[variableName] = data
-			
-			trySet(scope)
 		elseif (node["type"]["data"] == "var") then
 			scope[variableName] = data
 			
@@ -140,8 +238,14 @@ return function()
 	
 	Class.visitVariable = function(self, node, scope)
 		local variableName, value = node["data"], nil
-		
+						
 		value = scope[variableName]
+				
+		--[[print(variableName, value, scope["NAME"])
+		
+		if (variableName == "Car") then
+			print(value["position"])
+		end]]
 		
 		if (value == nil) then
 			return error(variableName .. " hasn't been set yet")
@@ -251,7 +355,13 @@ return function()
 				if (index == "PARENT" or index == "NAME") then
 					return rawget(self, index)
 				else
-					return tryFind(self, index)
+					local ret = tryFind(self, index)
+					
+					if (ret) then
+						self[index] = ret
+					end
+					
+					return ret
 				end
 			end
 		})
@@ -267,7 +377,7 @@ return function()
 		return self["visit" .. node["nodeType"]](self, node, scope)
 	end
 	
-	Class.interpret = function(self, AST, tokens, scope)		
+	Class.interpret = function(self, AST, tokens, scope, sendScope)		
 		self.AST = AST
 		self.tokens = tokens
 		self.id = 0
@@ -275,11 +385,13 @@ return function()
 		self.scopes = {
 			["GLOBAL"] = self:generateScope("GLOBAL")
 		}
+		self.sendScope = sendScope
+		self.classes = {}
 		
 		for i, v in pairs(scope) do
 			self.scopes["GLOBAL"][i] = v
 		end
-		
+				
 		self:visit(AST)
 		
 		return self.scopes["GLOBAL"], self.scopes
