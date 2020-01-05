@@ -34,11 +34,14 @@ return function()
 	end
 	
 	Class.keyWords= {
-		["if"] = true, ["elseif"] = true, ["else"] = true, ["function"] = true, ["return"] = true, ["for"] = true, ["while"] = true, ["let"] = true, ["var"] = true
+		["if"] = true, ["elseif"] = true, ["else"] = true, ["function"] = true, ["return"] = true, 
+		["for"] = true, ["while"] = true, ["let"] = true, ["var"] = true, ["class"] = true,
+		["extends"] = true, ["new"] = true
+		--["super"] = true, ["this"] = true-- These are keywords but its easier to just not set them as keywords for variables
 	}
 	
 	Class.builtins = {
-		["print"] = true
+		["import"] = true
 	}
 	
 	local function vdump(info)
@@ -184,9 +187,7 @@ return function()
 		-- [[ Variables ]] --
 		local fcode = Class:format(code)
 		local tokens = {}
-
-		print("Code Reformatted: ", fcode)
-		
+				
 		local index = 1
 		local codeSize = string.len(fcode)
 		local finished = false
