@@ -5,19 +5,39 @@ return function()
 	
 	Class.Main = function(self, options)
 		local defScope = {
-			["import"] = function(scope, ...)
+			["import"] = function(scope, ...)		
 				local toImport = { ... }
+								
+				local function set(ret, str)
+					if (ret["className"]) then						
+						scope[ret["className"]] = ret
+					else
+						local split = { }
+						
+						for directory in string.gmatch(str, "[%w-%*]+") do
+							table.insert(split, directory)
+						end
+						
+						scope[split[#split]] = self:interpret(ret)
+					end
+				end
 				
 				for i = 1, #toImport do					
-					local ret = import("Imports." .. toImport[i])
-										
-					scope[ret["className"]] = ret
+					local ret = import("Imports." .. tostring(toImport[i]))
+																									
+					if (typeof(ret) ~= "table" or ret["className"]) then
+						set(ret, tostring(toImport[i]))
+					else						
+						for n = 1, #ret do
+							set(ret[n], tostring(toImport[i]))										
+						end
+					end
 				end
 			end	
 		}
 		
 		local defSendScope = {
-			
+			["import"] = true
 		}
 		
 		self.options = options or {
@@ -46,6 +66,10 @@ return function()
 		end
 		
 		return self
+	end
+
+	Class.interpretClass = function(self, class)
+		return self:interpret(require(class)())
 	end
 	
 	Class.interpret = function(self, code)
