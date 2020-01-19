@@ -1,339 +1,23 @@
 return function()
 	local Class = BaseClass:new("Parser")
-	local Node = BaseClass:new("Node")
-	
-	local Root = BaseClass:new("Root")
-	local Number = BaseClass:new("Number")
-	local Assign = BaseClass:new("Assign")
-	local Variable = BaseClass:new("Variable")
-	local Unary = BaseClass:new("Unary")
-	local Empty = BaseClass:new("Empty")
-	local CallFunction = BaseClass:new("CallFunction")
-	local String = BaseClass:new("String")
-	local CreateFunction = BaseClass:new("CreateFunction")
-	local Return = BaseClass:new("Return")
-	local If = BaseClass:new("If")
-	local Compare = BaseClass:new("Compare")
-	local CompareOperator = BaseClass:new("CompareOperator")
-	local Boolean = BaseClass:new("Boolean")
-	local For = BaseClass:new("For")
-	local While = BaseClass:new("While")
-	local Array = BaseClass:new("Array")
-	local List = BaseClass:new("List")
-	local Access = BaseClass:new("Access")
-	local Pass = BaseClass:new("Pass")
-	local NewClass = BaseClass:new("Class")
-	local New = BaseClass:new("New")
-	
-	-- Default Node --
-	Node.Node = function(self, left, right, token)
-		self.nodeType = "Node"
-		
-		self.left = left
-		self.right = right
-		self.token = token
-		
-		return self
-	end
-	
-	-- New --
-	New.New = function(self, class, args)
-		self.nodeType = "New"
-		
-		self.class = class
-		self.arguments = args
-		
-		return self
-	end
-	
-	-- List --
-	List.List = function(self, elements)
-		self.nodeType = "List"
-		
-		self.elements = elements
-		
-		return self
-	end
-	
-	-- Pass --
-	Pass.Pass = function(self, token)
-		self.nodeType = "Pass"
-		
-		self.token = token
-		
-		return self
-	end
-	
-	NewClass.Class = function(self, token, statements, extends)
-		self.nodeType = "Class"
-		
-		self.token = token
-		self.statements = statements
-		self.extends = extends
-		
-		return self
-	end
-	
-	-- Access -- 
-	Access.Access = function(self, var, access)
-		self.nodeType = "Access"
-		
-		self.variable = var
-		self.access = access
-		
-		return self
-	end
-	
-	-- Array --
-	Array.Array = function(self, elements)
-		self.nodeType = "Array"
-		
-		self.elements = elements
-		
-		return self
-	end
-	
-	-- Empty --
-	Empty.Empty = function(self)
-		self.nodeType = "Empty"
-		
-		return self
-	end
-	
-	-- While --
-	While.While = function(self, check, statements)
-		self.nodeType = "While"
-		
-		self.check = check
-		self.statements = statements
-		
-		return self
-	end
-	
-	-- For --
-	For.For = function(self, variable, check, iter, statements)
-		self.nodeType = "For"
-		
-		self.variable = variable
-		self.check = check
-		self.iter = iter
-		self.statements = statements
-		
-		return self
-	end
-	
-	-- CompareOperator --
-	CompareOperator.CompareOperator = function(self, left, right, token)
-		self.nodeType = "CompareOperator"
-		
-		self.left = left
-		self.right = right
-		self.token = token
-		
-		return self
-	end
-	
-	-- Compare --
-	Compare.Compare = function(self, left, right, token)
-		self.nodeType = "Compare"
-		
-		self.left = left
-		self.right = right
-		self.token = token
-		
-		return self
-	end
-	
-	-- Boolean --
-	Boolean.Boolean = function(self, token)
-		self.nodeType = "Boolean"
-		
-		self.token = token
-		self.data = token["data"]
-		
-		return self
-	end
-	
-	-- CallFunction --
-	CallFunction.CallFunction = function(self, var, arguments)
-		self.nodeType = "CallFunction"
-		
-		self.arguments = arguments
-		self.variable = var
-		
-		return self
-	end
-	
-	-- If Statement --
-	If.If = function(self, check, ifs, eifs, es)
-		self.nodeType = "If"
-		
-		self.check = check
-		
-		self.ifStatmenets = ifs
-		self.elseifStatements = eifs
-		self.elseStatements = es
-		
-		return self
-	end
-	
-	-- Return --
-	Return.Return = function(self, expression)
-		self.nodeType = "Return"
-		
-		self.expression = expression
-		
-		return self
-	end
-	
-	-- String --
-	String.String = function(self, token)
-		self.nodeType = "String"
-		
-		self.token = token
-		self.data = token["data"]
-	
-		return self
-	end
-	
-	-- Create Function --
-	CreateFunction.CreateFunction = function(self, token, arguments, statements, ty)
-		self.nodeType = "CreateFunction"
-		
-		self.token = token
-		self.arguments = arguments
-		self.type = ty
-		
-		self.statements = statements
-		
-		return self
-	end
-		
-	-- Root --
-	Root.Root = function(self)
-		self.nodeType = "Root"
-		
-		self.children = {}
-		
-		return self
-	end
-	
-	-- Number Node --
-	Number.Number = function(self, token)
-		self.nodeType = "Number"
-		
-		self.token = token
-		self.data = token["data"]
-		
-		return self
-	end
-	
-	-- Unary Node --
-	Unary.Unary = function(self, token, expr)
-		self.nodeType = "Unary"
-		
-		self.token = token
-		self.expr = expr
-		
-		return self
-	end
-	
-	-- Assign a variable --
-	Assign.Assign = function(self, left, right, typ)
-		self.nodeType = "Assign"
-		
-		self.left = left
-		self.right = right
-		self.type = typ
-		
-		return self
-	end
-	
-	-- Variable Node --
-	Variable.Variable = function(self, token)
-		self.nodeType = "Variable"
-		
-		self.token = token
-		self.data = token["data"]
-		
-		return self
-	end
 	
 	Class.generateAST = function(self, tokens)
-		local currentIndex = 1
-		local currentToken = tokens[1]
-		local root = Root()
-		
-		local function eat(tokenType, tokenData)
-			if (currentToken["type"] == tokenType and currentToken["data"] == (tokenData or currentToken["data"])) then
+		local currentToken, currentIndex = tokens[1], 1
+						
+		local function eat(ty, data)
+			if (currentToken["type"] == ty and currentToken["data"] == (data or currentToken["data"])) then
 				currentIndex = currentIndex + 1
-				
 				currentToken = tokens[currentIndex]
 			else
-				error("Invalid Syntax")
-			end
-		end
-		
-		local function variableStatement()
-			local node, access = Variable(currentToken), nil
-					
-			eat("iden")
-			
-			function getAccess(var)
-				local nnode = nil
-								
-				if (currentToken["type"] == "other") then
-					if (currentToken["data"] == "[") then
-						eat("other")
-						
-						local data = expression()
-						
-						eat("other", "]")
-						
-						nnode = Access(var, data)
-					elseif (currentToken["data"] == ".") then
-						eat("other")
-						
-						local nvar = Pass(currentToken)
-						eat("iden")
-						
-						nnode = Access(var, nvar)
-					end
-				end
-				
-				if (nnode and currentToken["type"] == "other" and currentToken["data"] == "[" or currentToken["data"] == ".") then
-					return getAccess(nnode)
+				if (data ~= nil) then
+					error('Expected ' .. data .. ' on line ' .. currentToken["line"])
 				else
-					return nnode
+					error('Expected type ' .. ty .. ' on line ' .. currentToken["line"])
 				end
 			end
-			
-			access = getAccess(node)
-			
-			if (access) then
-				if (currentToken["type"] == "other" and currentToken["data"] == "(") then
-					return callFunction(access)
-				end
-				
-				if (currentToken["type"] == "assign") then
-					return assignStatement(access)
-				end
-				
-				return access
-			end
-			
-			return node
 		end
 		
-		local function booleanStatement()
-			local node = Boolean(currentToken)
-			
-			eat("boolean")
-			
-			return node
-		end
-		
-		local function listStatement()
+		function listStatement()
 			eat("other", "{")
 				
 			if (currentToken["type"] == "statement") then
@@ -344,26 +28,29 @@ return function()
 			
 			while (run) do
 				if (currentToken["data"] == "}") then
-					eat("other", "}")
+					eat("other")
 					
 					run = false
 				else
 					table.insert(elements, assignStatement())
 					
 					if (currentToken["data"] == ",") then
-						eat("other", ",")
+						eat("other")
 					end
 					
 					if (currentToken["type"] == "statement") then
-						eat("statement")
+						eat("statement", "\n")
 					end
 				end
 			end
 			
-			return List(elements)
+			return {
+				["nodeType"] = "List",
+				["elements"] = elements
+			}
 		end
 		
-		local function arrayStatment()
+		function arrayStatment()
 			eat("other", "[")
 			
 			if (currentToken["type"] == "statement") then
@@ -374,142 +61,135 @@ return function()
 			
 			while (run) do
 				if (currentToken["data"] == "]") then
-					eat("other", "]")
+					eat("other")
 					
 					run = false
 				else
 					table.insert(elements, expression())
 					
 					if (currentToken["data"] == ",") then
-						eat("other", ",")
+						eat("other")
 					end
 					
 					if (currentToken["type"] == "statement") then
-						eat("statement")
+						eat("statement", "\n")
 					end
 				end
 			end
 			
-			return Array(elements)
+			return {
+				["nodeType"] = "Array",
+				["elements"] = elements
+			}
 		end
 		
 		local function factor()
-			local token = currentToken
+			local token, ty, data = currentToken, currentToken["type"], currentToken["data"]
 			
-			if (token["type"] == "operator" and token["data"] == "+") then
-				eat("operator", "+")
-				
-				return Unary(token, factor())
-			elseif (token["type"] == "operator" and token["data"] == "-") then
-				eat("operator", "-")
-				
-				return Unary(token, factor())
-			elseif (token["type"] == "number") then
+			if (ty == "operator") then
+				if (data == "+" or data == "-") then
+					eat("operator")
+					
+					return {
+						["nodeType"] = "Unary",
+						["type"] = token,
+						["value"] = factor()
+					}
+				end
+			elseif (ty == "number") then
 				eat("number")
 				
-				return Number(token)
-			elseif (token["type"] == "string") then
+				return {
+					["nodeType"] = "Number",
+					["value"] = token
+				}
+			elseif (ty == "string") then
 				eat("string")
 				
-				return String(token)
-			elseif (token["type"] == "keyword" and token["data"] == "new") then
-				return newStatement()
-			elseif (token["type"] == "iden") then
-				if (tokens[currentIndex + 1]["data"] == "(") then
-					return callFunction()
-				else
-					return variableStatement()
+				return {
+					["nodeType"] = "String",
+					["value"] = token
+				}
+			elseif (ty == "keyword") then				
+				if (data == "new") then
+					return createNewStatement()
+				elseif (data == "function") then
+					return createFunction()
+				elseif (data == "null") then
+					eat("keyword")
+					
+					return {
+						["nodeType"] = "Null"
+					}
 				end
-			elseif (token["type"] == "boolean") then
-				return booleanStatement()
-			elseif (token["type"] == "other" and token["data"] == "[") then
-				return arrayStatment()
-			elseif (token["type"] == "other" and token["data"] == "{") then
-				return listStatement()
-			else
-				return Empty()
+			elseif (ty == "iden") then
+				local var = variableStatement()
+				
+				if (currentToken["data"] == "(") then
+					return callFunction(var)
+				else
+					return var
+				end
+			elseif (ty == "boolean") then
+				eat("boolean")
+				
+				return {
+					["nodeType"] = "Boolean",
+					["value"] = token
+				}
+			elseif (ty == "other") then
+				if (data == "[") then
+					return arrayStatment()
+				elseif (data == "{") then
+					return listStatement()
+				end
 			end
+				
+			return {
+				["nodeType"] = "Empty"
+			}
 		end
 		
-		local function term()
+		function term()
 			local node = factor()
+			local ty, data
 						
 			while (currentToken["type"] == "operator" and currentToken["data"] == "/" or currentToken["data"] == "*" or currentToken["data"] == "^" or currentToken["data"] == "%") do
-				local token = currentToken
+				local token, data = currentToken, currentToken["data"]
 				
-				if (token["data"] == "*") then
-					eat("operator", "*")
-				elseif (token["data"] == "/") then
-					eat("operator", "/")
-				elseif (token["data"] == "^") then
-					eat("operator", "^")
-				elseif (token["data"] == "%") then
-					eat("operator", "%")
+				if (data == "*") then
+					eat("operator")
+				elseif (data == "/") then
+					eat("operator")
+				elseif (data == "^") then
+					eat("operator")
+				elseif (data == "%") then
+					eat("operator")
 				end
 				
-				node = Node(node, factor(), token)
-				
+				node = {
+					["nodeType"] = "BinOp",
+					["left"] = node,
+					["right"] = factor(),
+					["value"] = token
+				}
+								
 				wait()
 			end
 			
 			return node
 		end
 		
-		function expression()
-			local node = term()
+		function createNewStatement()
+			eat("keyword")
 			
-			while (currentToken["type"] == "operator" and currentToken["data"] == "+" or currentToken["data"] == "-") do
-				local token = currentToken
-				
-				if (token["data"] == "+") then
-					eat("operator", "+")
-				elseif (token["data"] == "-") then
-					eat("operator", "-")
-				end
-				
-				node = Node(node, term(), token)
-				
-				wait()
-			end
-						
-			return node
-		end
-		
-		function assignStatement(var)
-			local typ = {
-				["type"] = "keyword",
-				["data"] = "edit"
-			}
-			
-			if (currentToken["type"] == "keyword") then
-				typ = currentToken
-				
-				eat("keyword")
-			end
-			
-			local left, right = var or variableStatement(), nil
-						
-			eat("assign")
-			
-			right = expression()
-			
-			return Assign(left, right, typ)
-		end
-		
-		function callFunction(nvar)
-			local var, run, arguments = Variable(currentToken), true, { }
-			
-			if (nvar) then
-				var = nvar
-			else
-				eat(currentToken["type"])
-			end
+			local class, run, arguments = variableStatement(), true, {}
 			
 			eat("other", "(")
-				
+			
 			while (run) do
 				if (currentToken["data"] == ")") then
-					eat("other", ")")
+					eat("other")
 			
 					run = false
 				else
@@ -523,13 +203,193 @@ return function()
 				wait()
 			end
 		
-			return CallFunction(var, arguments)
+			return {
+				["nodeType"] = "New",
+				["variable"] = class,
+				["arguments"] = arguments
+			}
 		end
-	
-		local function createReturn()					
-			eat("keyword", "return")
+		
+		function addExpression()
+			local node = term()
 			
-			return Return(expression())
+			while (currentToken["type"] == "operator" and currentToken["data"] == "+" or currentToken["data"] == "-") do
+				local token, data = currentToken, currentToken["data"]
+				
+				if (data == "+") then
+					eat("operator")
+				elseif (data == "-") then
+					eat("operator")
+				end
+				
+				node = {
+					["nodeType"] = "BinOp",
+					["left"] = node,
+					["right"] = term(),
+					["value"] = token
+				}
+				
+				wait()
+			end
+						
+			return node
+		end
+		
+		function compareExpression()
+			local node = addExpression()
+			
+			while (currentToken["type"] == "compare") do
+				local token, data = currentToken, currentToken["data"]
+				
+				eat("compare")
+								
+				node = {
+					["nodeType"] = "Compare",
+					["left"] = node,
+					["right"] = addExpression(),
+					["operator"] = token
+				}
+				
+				wait()
+			end
+			
+			return node
+		end
+		
+		function expression()
+			local node = compareExpression()
+			
+			while (currentToken["type"] == "compareop") do
+				local token, data = currentToken, currentToken["data"]
+				
+				eat("compareop")
+								
+				node = {
+					["nodeType"] = "CompareOperator",
+					["left"] = node,
+					["right"] = compareExpression(),
+					["value"] = token
+				}
+				
+				wait()
+			end
+			
+			return node
+		end
+		
+		function variableStatement(v)				
+			local node = {
+				["nodeType"] = "Variable",
+				["value"] = v or currentToken,
+			}
+			
+			if (v == nil) then
+				eat("iden")
+			end
+			
+			function getAccess(var)
+				local nnode = nil
+								
+				if (currentToken["type"] == "other") then
+					if (currentToken["data"] == "[") then
+						eat("other")
+						
+						local data = expression()
+						
+						eat("other", "]")
+						
+						nnode = {
+							["nodeType"] = "Access",
+							["variable"] = var,
+							["data"] = data
+						}
+					elseif (currentToken["data"] == ".") then
+						eat("other")
+						
+						local nvar = {
+							["nodeType"] = "Pass",
+							["value"] = currentToken
+						}
+						
+						eat("iden")
+						
+						nnode = {
+							["nodeType"] = "Access",
+							["variable"] = var,
+							["data"] = nvar
+						}
+					end
+				end
+				
+				if (nnode and currentToken["type"] == "other" and currentToken["data"] == "[" or currentToken["data"] == ".") then
+					return getAccess(nnode)
+				else
+					return nnode
+				end
+			end
+			
+			local access = getAccess(node)
+			
+			if (access) then
+				return access
+			else
+				return node
+			end
+		end
+		
+		function assignStatement(var, ty)
+			local varStat = var or variableStatement()
+			
+			eat("assign")
+			
+			return {
+				["nodeType"] = "Assign",
+				["variable"] = varStat,
+				["value"] = expression(),
+				["type"] = ty
+			}
+		end
+		
+		function callFunction(var)
+			local varStat = var or variableStatement()
+									
+			eat("other", "(")
+			
+			local run, arguments = true, { }
+			
+			while (run) do
+				if (currentToken["data"] == ")") then
+					run = false
+					
+					eat("other")
+				else
+					table.insert(arguments, expression())
+					
+					if (currentToken["data"] == ",") then
+						eat("other")
+					end
+				end
+			end
+			
+			if (currentToken["data"] == ".") then
+				local var = variableStatement({
+					["nodeType"] = "CallFunction",
+					["arguments"] = arguments,
+					["variable"] = varStat
+				})
+				
+				if (currentToken["data"] == "=") then
+					return assignStatement(var)
+				else
+					return var
+				end
+			else
+				return {
+					["nodeType"] = "CallFunction",
+					["arguments"] = arguments,
+					["variable"] = varStat
+				}
+			end
 		end
 		
 		function classStatement()
@@ -551,160 +411,8 @@ return function()
 				eat("statement", "\n")
 			end
 			
-			local run, stats = true, {}
+			local run, statements = true, {}
 			
-			while (run) do
-				if (currentToken["data"] == "}") then
-					eat("other", "}")
-			
-					run = false
-				else
-					table.insert(stats, statement())
-					
-					eat("statement")
-				end
-			end
-			
-			return NewClass(name, stats, extends)
-		end
-		
-		function newStatement()
-			eat("keyword")
-			
-			local class, run, arguments = variableStatement(), true, {}
-			
-			eat("other", "(")
-			
-			while (run) do
-				if (currentToken["data"] == ")") then
-					eat("other", ")")
-			
-					run = false
-				else
-					table.insert(arguments, expression())
-					
-					if (currentToken["data"] == ",") then
-						eat("other", ",")
-					end
-				end
-				
-				wait()
-			end
-	
-			return New(class, arguments)
-		end
-	
-		local function statementInfo()
-			local token, node = currentToken, nil
-						
-			if (token["data"] == "function") then
-				node = createFunction()
-			elseif (token["data"] == "return") then
-				node = createReturn()
-			elseif (token["data"] == "if") then
-				node = createIfStatement()
-			elseif (token["data"] == "for") then
-				node = createForStatement()
-			elseif (token["data"] == "while") then
-				node = createWhileStatement()
-			elseif (token["data"] == "let") then
-				node = assignStatement()
-			elseif (token["data"] == "var") then
-				node = assignStatement()
-			elseif (token["data"] == "class") then
-				node = classStatement()
-			else
-				return error("Syntax Error")
-			end
-			
-			return node
-		end
-		
-		function statement()
-			local node
-						
-			if (currentToken["type"] == "iden") then
-				if (tokens[currentIndex + 1]["data"] == "=") then
-					node = assignStatement()
-				elseif (tokens[currentIndex + 1]["data"] == "." or tokens[currentIndex + 1]["data"] == "[") then
-					node = variableStatement()
-				elseif (tokens[currentIndex + 1]["data"] == "(") then
-					node = callFunction()
-				end
-			elseif (currentToken["type"] == "builtin") then
-				node = callFunction()
-			elseif (currentToken["type"] == "keyword") then
-				node = statementInfo()
-			else
-				node = Empty()
-			end
-			
-			return node
-		end
-		
-		local function getStatements()
-			local node = statement()
-			local results = { node }
-						
-			while (currentToken["type"] == "statement" and currentIndex ~= #tokens) do				
-				eat("statement")
-				
-				table.insert(results, statement())
-				
-				wait()
-			end
-			
-			if (currentToken["type"] == "iden") then
-				return error("Syntax Error")
-			end
-			
-			return results
-		end
-		
-		local function getCheck()
-			local left, compare, right, node = expression(), nil, nil, nil
-						
-			if (currentToken["type"] ~= "compare") then
-				return Compare(left, Boolean({
-					["type"] = "boolean",
-					["data"] = "true"
-				}), {
-					["type"] = "compare",
-					["data"] = "=="
-				})
-			end
-			
-			compare = currentToken
-			eat("compare")
-			
-			right = expression()
-			
-			if (currentToken["type"] == "compareop") then
-				local token = currentToken
-				
-				eat("compareop")
-				
-				return CompareOperator(Compare(left, right, compare), getCheck(), token)
-			else
-				return Compare(left, right, compare)
-			end
-		end
-		
-		function createWhileStatement()
-			local check, statements, run = nil, {}, true
-			
-			eat("keyword")
-			eat("other", "(")
-				
-			check = getCheck()
-			
-			eat("other", ")")
-			eat("other", "{")
-				
-			if (currentToken["type"] == "statement") then
-				eat("statement", "\n")
-			end
-						
 			while (run) do
 				if (currentToken["data"] == "}") then
 					eat("other", "}")
@@ -717,138 +425,15 @@ return function()
 				end
 			end
 			
-			return While(check, statements)
+			return {
+				["nodeType"] = "Class",
+				["name"] = name,
+				["statements"] = statements,
+				["extends"] = extends
+			}
 		end
 		
-		function createIfStatement()
-			local check, ifs, eifs, es, arElse = nil, nil, nil, nil, false
-			
-			local function createStatements()
-				local run, stats = true, {}
-				
-				while (run) do
-					if (currentToken["data"] == "}") then
-						eat("other", "}")
-				
-						run = false
-					else
-						table.insert(stats, statement())
-						
-						eat("statement")
-					end
-				end
-				
-				return stats
-			end
-		
-			function getAtStatements(ret)
-				local nret = ret
-				
-				if (currentToken["data"] == "else") then
-					if (arElse) then
-						return error("Syntax Error")
-					end
-					
-					eat("keyword")
-					eat("other", "{")
-					
-					if (currentToken["type"] == "statement") then
-						eat("statement", "\n")
-					end
-										
-					nret["else"] = createStatements()
-										
-					arElse = true
-				elseif (currentToken["data"] == "elseif") then
-					if (arElse) then
-						return error("Syntax Error")
-					end
-					
-					eat("keyword")
-					eat("other", "(")
-					
-					local check = getCheck()
-					
-					eat("other", ")")
-					eat("other", "{")
-						
-					if (currentToken["type"] == "statement") then
-						eat("statement", "\n")
-					end
-					
-					table.insert(nret["elseifs"], If(check, createStatements()))
-				else
-					arElse = true
-				end
-			
-				if (not arElse) then
-					nret = getAtStatements(nret)
-				end
-				
-				return nret
-			end
-			
-			eat("keyword", "if")
-			eat("other", "(")
-			
-			check = getCheck()
-			
-			eat("other", ")")
-			eat("other", "{")
-				
-			if (currentToken["type"] == "statement") then
-				eat("statement", "\n")
-			end
-	
-			ifs = createStatements()
-		
-			local ret = getAtStatements({ ["elseifs"] = {} })
-			
-			es = ret["else"]
-			eifs = ret["elseifs"]
-			
-			return If(check, ifs, eifs, es)
-		end
-			
-		function createForStatement()
-			local variable, check, iter, statements, run = nil, nil, nil, {}, true
-			
-			eat("keyword")
-			eat("other", "(")
-			
-			variable = assignStatement()
-			
-			eat("statement")
-						
-			check = getCheck()
-			
-			eat("statement")
-						
-			iter = assignStatement()
-						
-			eat("other", ")")
-			eat("other", "{")
-				
-			if (currentToken["type"] == "statement") then
-				eat("statement", "\n")
-			end
-						
-			while (run) do
-				if (currentToken["data"] == "}") then
-					eat("other", "}")
-			
-					run = false
-				else
-					table.insert(statements, statement())
-					
-					eat("statement")
-				end
-			end
-			
-			return For(variable, check, iter, statements)
-		end
-	
-		function createFunction()
+		function createFunction(ty)
 			local token, run, arguments, statements = nil, true, {}, {}
 			
 			eat("keyword", "function")
@@ -862,7 +447,7 @@ return function()
 				while (run) do
 					if (currentToken["data"] == ")") then
 						run = false
-						eat("other", ")")
+						eat("other")
 					else
 						table.insert(arguments, currentToken["data"])
 						
@@ -892,22 +477,278 @@ return function()
 					eat("other", "}")
 			
 					run = false
-				else	
+				else					
 					table.insert(statements, statement())
-															
+																									
 					eat("statement")
 				end
 			end
 			
-			return CreateFunction(token, arguments, statements, "created")
+			return {
+				["nodeType"] = "CreateFunction",
+				["value"] = token,
+				["arguments"] = arguments,
+				["statements"] = statements,
+				["type"] = ty
+			}
+		end
+	
+		function typeStatement()
+			local node = {
+				["scope"] = currentToken,
+				["type"] = { }
+			}
+			
+			eat("keyword")
+			
+			while (currentToken["type"] == "keyword" and currentToken["data"] == "static" or currentToken["data"] == "final") do
+				table.insert(node["type"], currentToken)
+				
+				eat("keyword")
+			end
+			
+			if (currentToken["type"] == "keyword" and currentToken["data"] == "function") then
+				return createFunction(node)
+			elseif (currentToken["type"] == "iden") then
+				return assignStatement(variableStatement(), node)
+			end
+		end
+			
+		function returnStatement()
+			eat("keyword")
+						
+			return {
+				["nodeType"] = "Return",
+				["expression"] = expression() 
+			}
+		end
+
+		function statement()
+			local ty, data = currentToken["type"], currentToken["data"]
+			
+			if (ty == "iden") then
+				local var = variableStatement()
+				
+				if (currentToken["data"] == "=") then
+					return assignStatement(var)
+				elseif (currentToken["data"] == "(") then
+					return callFunction(var)
+				end
+			elseif (ty == "keyword") then
+				if (data == "for") then
+					return createForStatement()
+				elseif (data == "if") then
+					return createIfStatement()
+				elseif (data == "while") then
+					return createWhileStatement()
+				elseif (data == "class") then
+					return classStatement()
+				elseif (data == "public" or data == "private") then
+					return typeStatement()
+				elseif (data == "return") then
+					return returnStatement()
+				end	
+			end
+				
+			return {
+				["nodeType"] = "Empty"
+			}
+		end
+
+		function createWhileStatement()
+			local check, statements, run = nil, {}, true
+			
+			eat("keyword")
+			eat("other", "(")
+				
+			check = expression()
+			
+			eat("other", ")")
+			eat("other", "{")
+				
+			if (currentToken["type"] == "statement") then
+				eat("statement", "\n")
+			end
+						
+			while (run) do
+				if (currentToken["data"] == "}") then
+					eat("other", "}")
+			
+					run = false
+				else
+					table.insert(statements, statement())
+					
+					eat("statement")
+				end
+			end
+			
+			return {
+				["nodeType"] = "While",
+				["check"] = check,
+				["statements"] = statements
+			}
 		end
 		
-		local nodes = getStatements()		
+		function createIfStatement()
+			local check, ifs, eifs, es, arElse = nil, nil, nil, nil, false
+			
+			local function createStatements()
+				local run, stats = true, {}
+				
+				while (run) do
+					if (currentToken["data"] == "}") then
+						eat("other", "}")
+				
+						run = false
+					else				
+						table.insert(stats, statement())
+																		
+						eat("statement")
+					end
+				end
+				
+				return stats
+			end
 		
-		for i = 1, #nodes do						
+			function getAtStatements(ret)
+				local nret = ret
+								
+				if (currentToken["data"] == "else") then
+					eat("keyword")
+					eat("other", "{")
+					
+					if (currentToken["type"] == "statement") then
+						eat("statement", "\n")
+					end
+										
+					nret["else"] = createStatements()
+															
+					arElse = true
+				elseif (currentToken["data"] == "elseif") then					
+					eat("keyword")
+					eat("other", "(")
+					
+					local check = expression()
+					
+					eat("other", ")")
+					eat("other", "{")
+						
+					if (currentToken["type"] == "statement") then
+						eat("statement", "\n")
+					end
+										
+					table.insert(nret["elseifs"], {
+						["nodeType"] = "If",
+						["check"] = check,
+						["statements"] = createStatements()
+					})
+				else												
+					arElse = true
+				end
+			
+				if (not arElse) then
+					nret = getAtStatements(nret)
+				end
+				
+				return nret
+			end
+			
+			eat("keyword", "if")
+			eat("other", "(")
+			
+			check = expression()
+						
+			eat("other", ")")
+			eat("other", "{")
+				
+			if (currentToken["type"] == "statement") then
+				eat("statement", "\n")
+			end
+	
+			ifs = createStatements()
+					
+			local ret = getAtStatements({ ["elseifs"] = {} })
+			
+			es = ret["else"]
+			eifs = ret["elseifs"]
+			
+			return {
+				["nodeType"] = "If",
+				["check"] = check,
+				["ifstatements"] = ifs,
+				["elseifstatements"] = eifs,
+				["elsestatements"] = es
+			}
+		end
+			
+		function createForStatement()
+			local variable, check, iter, statements, run = nil, nil, nil, {}, true
+			
+			eat("keyword")
+			eat("other", "(")
+			
+			variable = assignStatement()
+			
+			eat("statement")
+						
+			check = expression()
+						
+			eat("statement")
+						
+			iter = assignStatement()
+						
+			eat("other", ")")
+			eat("other", "{")
+				
+			if (currentToken["type"] == "statement") then
+				eat("statement", "\n")
+			end
+						
+			while (run) do
+				if (currentToken["data"] == "}") then
+					eat("other")
+			
+					run = false
+				else
+					table.insert(statements, statement())
+					
+					eat("statement")
+				end
+			end
+		
+			return {
+				["nodeType"] = "For",
+				["variable"] = variable,
+				["check"] = check,
+				["iter"] = iter,
+				["statements"] = statements 
+			}
+		end
+		
+		local function getStatements()
+			local node = statement()
+			local results = { node }
+						
+			while (currentToken["type"] == "statement" and currentIndex ~= #tokens) do
+				eat("statement")
+				
+				table.insert(results, statement())
+								
+				wait()
+			end
+			
+			return results
+		end
+								
+		local root, nodes = {
+			["nodeType"] = "Root",
+			["children"] = { }
+		}, getStatements()		
+		
+		for i = 1, #nodes do		
 			table.insert(root.children, nodes[i])
 		end
-		
+						
 		return root
 	end
 	
