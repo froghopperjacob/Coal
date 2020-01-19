@@ -35,105 +35,74 @@ return function()
 	
 	Class.keyWords= {
 		["if"] = true, ["elseif"] = true, ["else"] = true, ["function"] = true, ["return"] = true, 
-		["for"] = true, ["while"] = true, ["let"] = true, ["var"] = true, ["class"] = true,
-		["extends"] = true, ["new"] = true
-		--["super"] = true, ["this"] = true-- These are keywords but its easier to just not set them as keywords for variables
+		["for"] = true, ["while"] = true, ["class"] = true, ["extends"] = true, ["new"] = true, 
+		["public"] = true, ["private"] = true, ["final"] = true, ["static"] = true,
+		["null"] = true
 	}
 	
 	Class.builtins = {
-		["import"] = true
+
 	}
 	
-	local function vdump(info)
-		if (Class.keyWords[info]) then
-			return {
-				["type"] = "keyword",
-				["data"] = info
-			}
-		elseif (Class.builtins[info]) then
-			return {
-				["type"] = "builtin",
-				["data"] = info
-			}
+	local function gen(ty, data, line)
+		return {
+			["type"] = ty,
+			["data"] = data,
+			["line"] = line
+		}
+	end
+	
+	local function vdump(data, line)
+		if (Class.keyWords[data]) then
+			return gen("keyword", data, line)
+		elseif (Class.builtins[data]) then
+			return gen("builtin", data, line)
 		else
-			return {
-				["type"] = "iden",
-				["data"] = info
-			}
+			return gen("iden", data, line)
 		end
 	end
 	
-	local function ndump(data)
-		return {
-			["type"] = "number",
-			["data"] = data
-		}
+	local function ndump(data, line)
+		return gen("number", data, line)
 	end
 	
-	local function sdump(data)
-		return {
-			["type"] = "string",
-			["data"] = data
-		}
+	local function sdump(data, line)
+		return gen("string", data, line)
 	end
 	
-	local function cdump(data)
-		return {
-			["type"] = "comment",
-			["data"] = data
-		}
+	local function cdump(data, line)
+		return nil -- Ignore comments
 	end
 	
-	local function odump(data)
-		return {
-			["type"] = "operator",
-			["data"] = data
-		}
+	local function odump(data, line)
+		return gen("operator", data, line)
 	end
 	
-	local function stdump(data)
-		return {
-			["type"] = "statement",
-			["data"] = data
-		}
+	local function stdump(data, line)
+		return gen("statement", data, line)
 	end
 	
-	local function tdump(data)
-		return {
-			["type"] = "compare",
-			["data"] = data
-		}
+	local function tdump(data, line)
+		return gen("compare", data, line)
 	end
 	
-	local function otdump(data)		
-		return {
-			["type"] = "other",
-			["data"] = data
-		}
+	local function otdump(data, line)		
+		return gen("other", data, line)
 	end
 	
-	local function adump(data)
-		return {
-			["type"] = "assign",
-			["data"] = data
-		}
+	local function adump(data, line)
+		return gen("assign", data, line)
 	end
 	
-	local function bdump(data)
-		return {
-			["type"] = "boolean",
-			["data"] = data
-		}
+	local function bdump(data, line)
+		return gen("boolean", data, line)
 	end
 	
-	local function codump(data)
-		return {
-			["type"] = "compareop",
-			["data"] = data
-		}
+	local function codump(data, line)
+		return gen("compareop", data, line)
 	end
 	
-	local function wsdump(data)
+	local function wsdump(data, line)
 		return nil
 	end
 	
@@ -192,6 +161,8 @@ return function()
 		local codeSize = string.len(fcode)
 		local finished = false
 		
+		local line = 1
+		
 		while (not finished) do
 			local found = false
 			
@@ -212,7 +183,11 @@ return function()
 						finished = (index > codeSize)
 						found = true
 						
-						table.insert(tokens, func(data, findnum))
+						if (data == "\n") then
+							line = line + 1
+						end
+						
+						table.insert(tokens, func(data, line))
 					end
 				end
 			end
