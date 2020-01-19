@@ -17,7 +17,7 @@ return function()
 		return true
 	end
 	
-	Class.Vector2 = function(self, scope, ...)
+	Class.Vector2 = function(self, ...)
 		local args = { ... }
 		
 		if (check(args, { "number", "number" }, 2)) then

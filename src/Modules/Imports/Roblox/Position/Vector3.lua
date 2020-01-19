@@ -17,7 +17,7 @@ return function()
 		return true
 	end
 	
-	Class.Vector3 = function(self, scope, ...)
+	Class.Vector3 = function(self, ...)
 		local args = { ... }
 		
 		if (typeof(args[1]) == "EnumItem") then

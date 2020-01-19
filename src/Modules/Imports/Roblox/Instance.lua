@@ -1,7 +1,7 @@
 return function()
 	local Class = BaseClass:new("Instance")
 	
-	local instances, unpaired, useClass = { }, { }, nil
+	local unpaired, useClass = { }, { }
 	
 	local function check(args, checks, num)
 		if (#args ~= num) then
@@ -19,32 +19,43 @@ return function()
 		return true
 	end
 	
-	Class.Instance = function(self, scope, ...)
+	Class.Instance = function(self, ...)
 		local args = { ... }
 		
 		if (check(args, { "string", "table" }, 2)) then
-			local nin = Instance.new(args[1])
-			
-			for name, value in pairs(args[2]) do
-				nin[name] = value
+			local nin, par, tb = Instance.new(args[1]), nil, args[2]
+						
+			if (tb["className"] == "List") then				
+				tb = tb.list
 			end
 			
-			table.insert(instances, nin)
+			for name, value in pairs(tb) do				
+				if (name == "Parent") then
+					par = value
+				else
+					nin[name] = value
+				end
+			end
+			
+			if (par) then
+				nin.Parent = par
+			end
+			
 			table.insert(unpaired, nin)
 			
-			Class.update(useClass)
+			self:update(useClass)
 			
 			return nin
 		end
 	end
 	
-	Class.tieClass = function(scope, class)		
+	Class.tieClass = function(self, scope, class)		
 		useClass = class
 		
-		Class.update(class)
+		self:update(class)
 	end
 		
-	Class.update = function(class)
+	Class.update = function(self, class)
 		for name, value in pairs(class) do			
 			if (typeof(value) == "function") then				
 				for _, instance in pairs(unpaired) do					
