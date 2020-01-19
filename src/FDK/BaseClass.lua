@@ -65,7 +65,7 @@ local function createProxyInterface(object)
 			return object(...):lock()
 		end,
 
-		__tostring = function(self)
+		__tostring = function(self)			
 			return tostring(object)
 		end,
 
@@ -94,7 +94,7 @@ end
 	Function: Checks if the classes are the exact same
 	Arguments: self - the class, value - the other class
 ]]
-internal.__eq = function(self, value)
+internal.__eq = function(self, value)	
 	return internal.classes[value] and self:isA(value["className"]) or false
 end
 
@@ -139,7 +139,7 @@ BaseClass.new = function(self, className)
 	newClass.__properties = externalClassProperties
 
 	return setmetatable(newClass, {
-		__index = function(self, index)
+		__index = function(self, index)			
 			if (rawget(newClass, index)) then
 				return rawget(newClass, index)
 			end
@@ -151,16 +151,13 @@ BaseClass.new = function(self, className)
 			if (BaseClass[index]) then
 				return BaseClass[index]
 			end
+			
+			--[[if (rawget(newClass, "__index")) then
+				return rawget(newClass, "__index")(newClass, index)
+			end]]
+			
+			return nil
 		end,
-
-		__newindex = function(self, index, value)
-			if (string.sub(index, 1, string.len("__")) == "__" and checkTypes(value, "function", "string")) then
-				getmetatable(self)[index] = value
-			end
-
-			return rawset(self, index, value)
-		end,
-
 
 		__tostring = function(self)
 			return classString
@@ -168,7 +165,15 @@ BaseClass.new = function(self, className)
 
 		__eq = internal.__eq,
 
-		__call = internal.__call
+		__call = internal.__call,
+		
+		__newindex = function(self, index, value)
+			if (string.sub(index, 1, string.len("__")) == "__" and checkTypes(value, "function", "string") and index ~= "__index") then												
+				getmetatable(self)[index] = value
+			end
+
+			rawset(self, index, value)
+		end
 	})
 end
 
@@ -183,7 +188,7 @@ BaseClass.extend = function(extender, className)
 	internal.classes[newClass].inherits = properties.inherits
 	internal.classes[newClass].inherits[properties.className] = extender
 
-	getmetatable(newClass).__index = function(self, k)
+	getmetatable(newClass).__index = function(self, k)		
 		if (string.sub(k, 1, string.len(forceString)) == forceString) then
 			if (extender[k:sub(string.len(forceString) + 1)]) then
 				return extender[k:sub(string.len(forceString) + 1)]
@@ -193,6 +198,14 @@ BaseClass.extend = function(extender, className)
 		if (rawget(newClass, k)) then
 			return rawget(newClass, k)
 		end
+	
+		if (rawget(extender, "__index")) then
+			local ret = rawget(extender, "__index")(newClass, k)
+						
+			if (ret ~= nil) then
+				return ret
+			end
+		end
 
 		if (extender[k]) then
 			return extender[k]
@@ -201,7 +214,26 @@ BaseClass.extend = function(extender, className)
 		if (BaseClass[k]) then
 			return BaseClass[k]
 		end
+		
+		return nil
 	end
+
+	--Class Metamethods
+	getmetatable(newClass)["__tostring"] = tryGetMetatable(extender, "__tostring")
+	getmetatable(newClass)["__concat"] = tryGetMetatable(extender, "__concat")
+	getmetatable(newClass)["__unm"] = tryGetMetatable(extender, "__unm")
+	getmetatable(newClass)["__add"] = tryGetMetatable(extender, "__add")
+	getmetatable(newClass)["__sub"] = tryGetMetatable(extender, "__sub")
+	getmetatable(newClass)["__mul"] = tryGetMetatable(extender, "__mul")
+	getmetatable(newClass)["__div"] = tryGetMetatable(extender, "__div")
+	getmetatable(newClass)["__mod"] = tryGetMetatable(extender, "__mod")
+	getmetatable(newClass)["__pow"] = tryGetMetatable(extender, "__pow")
+	getmetatable(newClass)["__eq"] = tryGetMetatable(extender, "__eq")
+	getmetatable(newClass)["__lt"] = tryGetMetatable(extender, "__lt")
+	getmetatable(newClass)["__le"] = tryGetMetatable(extender, "__le")
+	getmetatable(newClass)["__gc"] = tryGetMetatable(extender, "__gc")
+	getmetatable(newClass)["__len"] = tryGetMetatable(extender, "__len")
+	getmetatable(newClass)["__mode"] = tryGetMetatable(extender, "__mode")
 
 	return newClass
 end

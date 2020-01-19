@@ -49,18 +49,58 @@ FDK.import = function(self, ...)
 		elseif (importString == "BaseClass" or importString == "Class") then
 			returns[index] = BaseClass
 		else
-			local currentIndex, splitImportString, toRequire =
-				packages, { }, nil
+			local currentIndex, splitImportString, toRequire, found =
+				packages, { }, nil, false
 
-			for directory in string.gmatch(importString, "%w+") do
+			for directory in string.gmatch(importString, "[%w-%*]+") do
 				table.insert(splitImportString, directory)
 			end
 
-			for _, directory in pairs(splitImportString) do
-				if (currentIndex:FindFirstChild(directory)) then
-					currentIndex = currentIndex[directory]
+			for _, directory in pairs(splitImportString) do				
+				if (directory == "*") then					
+					local strs, str = { }, ""
+					
+					for i = 1, #splitImportString do
+						local s = splitImportString[i]
+						
+						if (s ~= "*" and i ~= 1) then
+							str = str .. "." .. s
+						elseif (s ~= "*") then
+							str = str .. s
+						end
+					end
+										
+					for _, file in pairs(currentIndex:GetChildren()) do						
+						if (file.ClassName == "Folder") then
+							table.insert(strs, str .. "." .. file.Name .. ".*")
+						else
+							table.insert(strs, str .. "." .. file.Name)
+						end
+					end
+										
+					local reT, send = { self:import(unpack(strs)) }, { }
+										
+					local function flatten(arr)
+						for i, v in ipairs(arr) do
+							if (typeof(v) == "table" and v["className"] == nil) then
+								flatten(v)
+							else
+								send[i] = v
+							end
+						end
+					end
+					
+					flatten(reT)
+													
+					returns[index] = send
+										
+					found = true
 				else
-					return error("[FDK - PACKAGE MANAGER] Package " .. directory .. " does not exist.")
+					if (currentIndex:FindFirstChild(directory)) then
+						currentIndex = currentIndex[directory]
+					else
+						return error("[FDK - PACKAGE MANAGER] Package " .. directory .. " does not exist.")
+					end
 				end
 			end
 
@@ -70,20 +110,22 @@ FDK.import = function(self, ...)
 				toRequire = currentIndex
 			end
 
-			if (toRequire == nil) then
+			if (toRequire == nil and found == false) then
 				return error("[FDK - PACKAGE MANAGER] Package does not exist.")
 			end
 
-			local class = require(toRequire)
-
-			if (not checkTypes(class, "table", "function")) then
-				return error("[FDK - PACKAGE MANAGER] Expected function or table, got "
-					.. typeof(class) .. " while initalizing class module.")
+			if (found == false) then
+				local class = require(toRequire)
+	
+				if (not checkTypes(class, "table", "function")) then
+					return error("[FDK - PACKAGE MANAGER] Expected function or table, got "
+						.. typeof(class) .. " while initalizing class module.")
+				end
+	
+				self:wrapEnvironment(class)
+	
+				returns[index] = class()
 			end
-
-			self:wrapEnvironment(class)
-
-			returns[index] = class()
 		end
 	end
 
