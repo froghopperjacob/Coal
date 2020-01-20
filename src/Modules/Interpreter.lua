@@ -41,15 +41,13 @@ return function()
 		local variableName = node["variable"]["value"]["data"]
 				
 		self:visit(node["variable"], scope)
-		
-		while (self:visit(node["check"], scope)) do
+				
+		while (self:visit(node["check"], scope)) do			
 			for index = 1, #node["statements"] do
 				self:visit(node["statements"][index], scope)
 			end
 			
 			self:visit(node["iter"], scope)
-			
-			wait()
 		end
 	end
 	
@@ -58,8 +56,6 @@ return function()
 			for index = 1, #node["statements"] do
 				self:visit(node["statements"][index], scope)
 			end
-			
-			wait()
 		end
 	end
 	
@@ -93,6 +89,14 @@ return function()
 	
 	Class.visitAccess = function(self, node, scope)
 		local ac, accessor = self:visit(node["variable"], scope), self:visit(node["data"], scope)
+				
+		if (ac == nil) then
+			error("Accessing nil with is invalid")
+		end
+		
+		if (accessor == nil) then
+			error("Accessing " .. ac .. " with ")
+		end
 												
 		if (typeof(accessor) == "number") then			
 			return ac[accessor + 1]
@@ -124,7 +128,9 @@ return function()
 			end
 		end
 		
-		scope[node["value"]["data"]] = func
+		if (node["value"] ~= nil) then
+			scope[node["value"]["data"]] = func
+		end
 	
 		if (node["type"] ~= nil) then
 			if (node["type"]["sco"] == "private") then
@@ -133,9 +139,9 @@ return function()
 			
 			if (node["type"]["type"]) then
 				for _, v in ipairs(node["type"]["type"]) do
-					if (v["data"] == "final") then
+					if (v == "final") then
 						scope["FINAL"][node["value"]["data"]] = true
-					elseif (v["data"] == "static") then
+					elseif (v == "static") then
 						scope["STATIC"][node["value"]["data"]] = true
 					end
 				end
@@ -143,10 +149,6 @@ return function()
 		end
 
 		return func
-	end
-
-	Class.visitType = function(self, node, scope)
-		return node["scope"], node["type"]
 	end
 
 	Class.visitNew = function(self, node, scope)
@@ -182,9 +184,7 @@ return function()
 	
 	Class.visitCallFunction = function(self, node, scope)				
 		local args, func, check = { }, self:visit(node["variable"], scope), nil
-		
-		--print(func, game:GetService("HttpService"):JSONEncode(node["variable"]))
-	
+			
 		if (node["variable"]["nodeType"] == "Variable") then
 			check = self.sendScope[node["variable"]["value"]["data"]] == true
 		end
@@ -284,9 +284,9 @@ return function()
 			end
 			
 			for _, t in ipairs(ty) do
-				if (t["data"] == "static") then
+				if (t == "static") then
 					scope["STATIC"][variableName] = true
-				elseif (t["data"] == "final") then
+				elseif (t == "final") then
 					scope["FINAL"][variableName] = true
 				end
 			end
@@ -329,7 +329,7 @@ return function()
 			
 			if (node["type"]["type"]) then
 				for _, v in ipairs(node["type"][""]) do
-					if (v["data"] == "static") then
+					if (v == "static") then
 						if (retscope["INIT"] == true) then
 							return error("Cannot use a static variable inside of a initiated class")
 						end
@@ -620,9 +620,9 @@ return function()
 					if (self["STATIC"][index] and self["INIT"]) then
 						return error("Setting a static variable in a intialized class is invalid.")
 					end
-										
+															
 					if (self["STATIC"][index] == nil and not self["INIT"]) then
-						return error("Setting a non static variable in a non intalized class is invalid.")
+						--return error("Setting a non static variable in a non intalized class is invalid.")
 					end
 				end
 				

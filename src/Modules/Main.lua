@@ -1,8 +1,8 @@
 return function()
 	local Class = BaseClass:new("Main")
 	
-	local Lexer, Parser, Validator, Interpreter = import("Lexer", "Parser", "Validator", "Interpreter")
-	
+	local Lexer, Parser, Interpreter = require(script.Parent.Lexer), require(script.Parent.Parser), import("Interpreter")
+		
 	Class.Main = function(self, options)
 		local defScope = {
 			["import"] = function(scope, ...)		
@@ -22,7 +22,7 @@ return function()
 					end
 				end
 				
-				for i = 1, #toImport do					
+				for i = 1, #toImport do
 					local ret = import("Imports." .. tostring(toImport[i]))
 																									
 					if (typeof(ret) ~= "table" or ret["className"]) then
@@ -69,15 +69,14 @@ return function()
 	end
 
 	Class.interpretClass = function(self, class)
-		return self:interpret(require(class)())
+		return self:interpret(require(class))
 	end
 	
 	Class.interpret = function(self, code)
 		local LexerTimeStart, LexerTimeEnd,
 			ParserTimeStart, ParserTimeEnd,
-			ValidatorTimeStart, ValidatorTimeEnd,
 			InterpretTimeStart, InterpreterTimeEnd,
-			ret, globalScope, sendScope, scopes = nil, nil, nil, nil, nil, nil, 0, 0, nil, self.options["Scope"], self.options["SendScope"], nil
+			ret, globalScope, sendScope, scopes = nil, nil, nil, nil, 0, 0, nil, self.options["Scope"], self.options["SendScope"], nil
 		
 		if (not self.options) then
 			return error('Class not initalized')
@@ -92,32 +91,25 @@ return function()
 		end
 		
 		LexerTimeStart = tick()
-		local tokens = Lexer:getTokens(code)
+		local tokens = Lexer(code)
 		LexerTimeEnd = tick()
 		
 		ParserTimeStart = tick()
-		local AST = Parser:generateAST(tokens)
+		local AST = Parser(tokens)
 		ParserTimeEnd = tick()
 		
-		ValidatorTimeStart = tick()
-		local valid, err = Validator:validate(AST, tokens)
-		ValidatorTimeEnd = tick()
-		
-		if (valid) then
-			InterpretTimeStart = tick()			
-			globalScope, scopes = Interpreter:interpret(AST, tokens, globalScope, sendScope)
-			InterpreterTimeEnd = tick()
-		end
+		InterpretTimeStart = tick()			
+		globalScope, scopes = Interpreter:interpret(AST, tokens, globalScope, sendScope)
+		InterpreterTimeEnd = tick()
 		
 		return {
 			["tokens"] = tokens,
 			["AST"] = AST,
 			
-			["valid"] = valid,
-			["error"] = err or "",
-			
 			["globalScope"] = globalScope,
 			["scopes"] = scopes,
+			
+			["code"] = code,
 			
 			["times"] = {
 				["Lexer"] = {
@@ -131,18 +123,14 @@ return function()
 					["end"] = ParserTimeEnd,
 					["elapsed"] = ParserTimeEnd - ParserTimeStart
 				},
-		
-				["Validator"] = {
-					["start"] = ValidatorTimeStart,
-					["end"] = ValidatorTimeEnd,
-					["elapsed"] = ValidatorTimeEnd - ValidatorTimeStart
-				},
 	
 				["Interpreter"] = {
 					["start"] = InterpretTimeStart,
 					["end"] = InterpreterTimeEnd,
 					["elapsed"] = InterpreterTimeEnd - InterpretTimeStart
 				},
+	
+				["elapsed"] = (LexerTimeEnd - LexerTimeStart) + (ParserTimeEnd - ParserTimeEnd) + (InterpreterTimeEnd - InterpretTimeStart)
 			}
 		}
 	end

@@ -117,14 +117,18 @@ FDK.import = function(self, ...)
 			if (found == false) then
 				local class = require(toRequire)
 	
-				if (not checkTypes(class, "table", "function")) then
-					return error("[FDK - PACKAGE MANAGER] Expected function or table, got "
+				if (not checkTypes(class, "table", "function", "string")) then
+					return error("[FDK - PACKAGE MANAGER] Expected function, table, or string got "
 						.. typeof(class) .. " while initalizing class module.")
 				end
+					
+				if (typeof(class) == "string") then
+					returns[index] = class
+				else
+					self:wrapEnvironment(class)
 	
-				self:wrapEnvironment(class)
-	
-				returns[index] = class()
+					returns[index] = class()
+				end
 			end
 		end
 	end
