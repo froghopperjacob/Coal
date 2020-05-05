@@ -33,7 +33,7 @@ Calling the ``Coal`` function allows a ``Scope`` table
 local data = Coal:interpret(code)
 ```
 
-``interpret`` will return the some the ``code`` data
+``interpret`` will return ``data`` with the table listed below
 
 ### data.tokens
 
