@@ -1,10 +1,9 @@
-return function()
-	local Class = BaseClass:new("Main")
-	
-	local Lexer, Parser, Interpreter = require(script.Parent.Lexer), require(script.Parent.Parser), import("Interpreter")
-		
-	Class.Main = function(self, options)
-		local defScope = {
+local options
+local Settings, Lexer, Parser, Bytecode, VM = require(script.Parent.Settings), require(script.Parent.Lexer), require(script.Parent.Parser), require(script.Parent.Bytecode), require(script.Parent.VM)
+
+return {
+	["Setup"] = function(self, goptions)
+		local defaultScope = {
 			["import"] = function(scope, ...)		
 				local toImport = { ... }
 								
@@ -22,8 +21,8 @@ return function()
 					end
 				end
 				
-				for i = 1, #toImport do
-					local ret = import("Imports." .. tostring(toImport[i]))
+				for i = 1, #toImport do -- todo first
+					local ret = require("Imports." .. tostring(toImport[i]))
 																									
 					if (typeof(ret) ~= "table" or ret["className"]) then
 						set(ret, tostring(toImport[i]))
@@ -33,78 +32,86 @@ return function()
 						end
 					end
 				end
-			end	
+			end
 		}
-		
+			
 		local defSendScope = {
 			["import"] = true
 		}
 		
-		self.options = options or {
-			["Scope"] = defScope,
+		options = goptions or {
+			["Scope"] = defaultScope,
 			["SendScope"] = defSendScope
 		}
 			
-		if (self.options["Scope"] ~= defScope) then
-			local nScope = defScope
+		if (options["Scope"] ~= defaultScope) then
+			local nScope = defaultScope
 			
-			for i, v in pairs(self.options["Scope"]) do
+			for i, v in pairs(options["Scope"]) do
 				nScope[i] = v
 			end
 			
-			self.options["Scope"] = nScope
+			options["Scope"] = nScope
 		end
 		
-		if (self.options["SendScope"] ~= defSendScope) then
+		if (options["SendScope"] ~= defSendScope) then
 			local nSScope = defSendScope
 			
-			for i, v in pairs(self.options["SendScope"]) do
+			for i, v in pairs(options["SendScope"]) do
 				nSScope[i] = v
 			end
 			
-			self.options["SendScope"] = nSScope
+			options["SendScope"] = nSScope
 		end
 		
 		return self
-	end
-
-	Class.interpretClass = function(self, class)
-		return self:interpret(require(class))
-	end
+	end,
 	
-	Class.interpret = function(self, code)
+	["version"] = Settings["Version"],
+	
+	["interpretClass"] = function(self, class, rbytecode)
+		return self:interpret(require(class), class.Name, rbytecode)
+	end,
+	
+	["interpret"] = function(self, code, className, rbytecode)
 		local LexerTimeStart, LexerTimeEnd,
 			ParserTimeStart, ParserTimeEnd,
-			InterpretTimeStart, InterpreterTimeEnd,
-			ret, globalScope, sendScope, scopes = nil, nil, nil, nil, 0, 0, nil, self.options["Scope"], self.options["SendScope"], nil
+			BytecodeTimeStart, BytecodeTimeEnd,
+			VMTimeStart, VMTimeEnd,
+			ret, globalScope, sendScope, scopes, tokens, AST, bytecode = 0, 0, 0, 0, 0, 0, nil, nil, nil, options["Scope"], options["SendScope"], nil, nil, nil, nil
 		
-		if (not self.options) then
-			return error('Class not initalized')
+		if (not options) then
+			return error('No options have been given')
 		end
-		
-		if (not code) then
-			return error('Incorrect number of arguments given')
+
+		if (rbytecode == nil or rbytecode == false) then
+			LexerTimeStart = tick()
+			tokens = Lexer(code)
+			LexerTimeEnd = tick()
+			
+			ParserTimeStart = tick()
+			AST = Parser(tokens)
+			ParserTimeEnd = tick()
+			
+			BytecodeTimeStart = tick()
+			bytecode = Bytecode(AST, className)
+			BytecodeTimeEnd = tick()
+			
+			print(game:GetService("HttpService"):JSONEncode(bytecode))
+						
+			VMTimeStart = tick()
+			scopes = VM(bytecode, globalScope)
+			VMTimeEnd = tick()
+		else
+			VMTimeStart = tick()
+			scopes = VM(code, globalScope)
+			VMTimeEnd = tick()
 		end
-		
-		if (not typeof(code) == 'string') then
-			return error('Incorrect argument type given')
-		end
-		
-		LexerTimeStart = tick()
-		local tokens = Lexer(code)
-		LexerTimeEnd = tick()
-		
-		ParserTimeStart = tick()
-		local AST = Parser(tokens)
-		ParserTimeEnd = tick()
-		
-		InterpretTimeStart = tick()			
-		globalScope, scopes = Interpreter:interpret(AST, tokens, globalScope, sendScope)
-		InterpreterTimeEnd = tick()
 		
 		return {
 			["tokens"] = tokens,
 			["AST"] = AST,
+			["bytecode"] = bytecode,
 			
 			["globalScope"] = globalScope,
 			["scopes"] = scopes,
@@ -124,16 +131,20 @@ return function()
 					["elapsed"] = ParserTimeEnd - ParserTimeStart
 				},
 	
-				["Interpreter"] = {
-					["start"] = InterpretTimeStart,
-					["end"] = InterpreterTimeEnd,
-					["elapsed"] = InterpreterTimeEnd - InterpretTimeStart
+				["Bytecode"] = {
+					["start"] = BytecodeTimeStart,
+					["end"] = BytecodeTimeEnd,
+					["elapsed"] = BytecodeTimeEnd - BytecodeTimeStart
+				},
+				
+				["VM"] = {
+					["start"] = VMTimeStart,
+					["end"] = VMTimeEnd,
+					["elapsed"] = VMTimeEnd - VMTimeStart
 				},
 	
-				["elapsed"] = (LexerTimeEnd - LexerTimeStart) + (ParserTimeEnd - ParserTimeEnd) + (InterpreterTimeEnd - InterpretTimeStart)
+				["elapsed"] = (LexerTimeEnd - LexerTimeStart) + (ParserTimeEnd - ParserTimeEnd) + (BytecodeTimeEnd - BytecodeTimeStart) + (VMTimeEnd - VMTimeStart)
 			}
 		}
 	end
-	
-	return Class
-end
+}

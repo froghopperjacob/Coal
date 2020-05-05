@@ -24,7 +24,7 @@ local keyWords= {
 	["if"] = true, ["elseif"] = true, ["else"] = true, ["function"] = true, ["return"] = true, 
 	["for"] = true, ["while"] = true, ["class"] = true, ["extends"] = true, ["new"] = true, 
 	["public"] = true, ["private"] = true, ["final"] = true, ["static"] = true,
-	["null"] = true
+	["null"] = true, ["local"] = true -- temp
 }
 
 local function format(code)
@@ -37,15 +37,6 @@ local function format(code)
 	return ncode
 end
 
-
-
---[[local function gen(ty, data, line)
-	return {
-		["type"] = ty,
-		["data"] = data,
-		["line"] = line
-	}
-end]]
 
 local function vdump(data, line)
 	if (keyWords[data]) then
@@ -135,6 +126,14 @@ local function codump(data, line)
 	}
 end
 
+local function nodump(data, line)
+	return {
+		["type"] = "notop",
+		["data"] = data,
+		["line"] = line
+	}
+end
+
 local function wsdump(data, line)
 	return nil -- Whitespace is ignored
 end
@@ -163,28 +162,36 @@ local matchFuncs = {
 	{MCOMMENT2, cdump},			
 	{SCOMMENT1, cdump},            -- Singleline-Comments
 	{SCOMMENT2, cdump},
-	
+
+	{"^+", 		odump},			   -- Operators
+	{"^-",		odump},
+	{"^*%*",	odump},
+	{"^*",		odump},
+	{"^/",		odump},
+	{"^%%",		odump},
+	{"^&",		odump},
+	{"^|",		odump},
+	{"^^",		odump},
+	{"^~",		odump},
+	{"^<<",		odump},
+	{"^>>",		odump},
+
 	{"^==",     tdump},            -- Compare Operators
-	{"^~=",     tdump},
+	{"^!=",     tdump},
 	{"^<=",     tdump},
 	{"^>=",     tdump},
 	{"^>",		tdump},
 	{"^<",		tdump},
 	
-	{"^+", 		odump},			   -- Operators
-	{"^-",		odump},
-	{"^*",		odump},
-	{"^/",		odump},
-	{"^^",		odump},
-	{"^%%",		odump},
+	{"^&&",		codump},		   -- Compare Operators
+	{"^||",		codump},
 	
 	{"^=",		adump},			   -- Assign
 	
 	{"^;",		stdump},		   -- Statement
 	{"^\n",		stdump},
 	
-	{"^&&",		codump},		   -- Compare Operators
-	{"^||",		codump},
+	{"^!",		nodump},		   -- Not
 	
 	{"^.",		otdump}			   -- Other
 }
@@ -193,14 +200,14 @@ return function(code)
 	-- [[ Variables ]] --
 	local fcode = format(code)
 	local tokens = {}
-			
+						
 	local index = 1
 	local codeSize = string.len(fcode)
 	local finished = false
 	
 	local line = 1
 	
-	while (not finished) do
+	while (not finished) do		
 		local found = false
 		
 		for _, match in pairs(matchFuncs) do
@@ -209,11 +216,11 @@ return function(code)
 									
 				local num1, num2 = string.find(fcode, pattern, index)
 				
-				if (num1) then						
+				if (num1) then
 					local data = string.sub(fcode, num1, num2)
 					
 					index = (num2 + 1)
-					
+															
 					finished = (index > codeSize)
 					found = true
 					

@@ -1,6 +1,6 @@
 return function(tokens)
 	local currentToken, currentIndex = tokens[1], 1
-					
+						
 	local function eat(ty, data)
 		if (currentToken["type"] == ty and currentToken["data"] == (data or currentToken["data"])) then
 			currentIndex = currentIndex + 1
@@ -18,7 +18,15 @@ return function(tokens)
 		local token, ty, data = currentToken, currentToken["type"], currentToken["data"]
 		
 		if (ty == "operator") then
-			if (data == "+" or data == "-") then
+			if (data == "-") then
+				eat("operator")
+				
+				return {
+					["nodeType"] = "Unary",
+					["type"] = token,
+					["value"] = factor()
+				}
+			elseif (data == "~") then
 				eat("operator")
 				
 				return {
@@ -27,18 +35,28 @@ return function(tokens)
 					["value"] = factor()
 				}
 			end
+		elseif (ty == "notop") then
+			eat("notop")
+			
+			return {
+				["nodeType"] = "Unary",
+				["type"] = token,
+				["value"] = expression()
+			}
 		elseif (ty == "number") then
 			eat("number")
 			
 			return {
-				["nodeType"] = "Number",
+				["nodeType"] = "Constant",
+				["type"] = "number",
 				["value"] = token
 			}
 		elseif (ty == "string") then
 			eat("string")
 			
 			return {
-				["nodeType"] = "String",
+				["nodeType"] = "Constant",
+				["type"] = "string",
 				["value"] = token
 			}
 		elseif (ty == "keyword") then				
@@ -50,7 +68,9 @@ return function(tokens)
 				eat("keyword")
 				
 				return {
-					["nodeType"] = "Null"
+					["nodeType"] = "Constant",
+					["type"] = "null",
+					["value"] = nil
 				}
 			end
 		elseif (ty == "iden") then
@@ -72,7 +92,15 @@ return function(tokens)
 			if (data == "[") then
 				return arrayStatment()
 			elseif (data == "{") then
-				return listStatement()
+				return dictionaryStatement()
+			elseif (data == "(") then
+				eat("other")
+				
+				local node = expression()
+				
+				eat("other", ")")
+				
+				return node
 			end
 		end
 			
@@ -85,18 +113,10 @@ return function(tokens)
 		local node = factor()
 		local ty, data
 					
-		while (currentToken["type"] == "operator" and currentToken["data"] == "/" or currentToken["data"] == "*" or currentToken["data"] == "^" or currentToken["data"] == "%") do
-			local token, data = currentToken, currentToken["data"]
+		while (currentToken["type"] == "operator" and currentToken["data"] == "/" or currentToken["data"] == "*" or currentToken["data"] == "**" or currentToken["data"] == "%" or currentToken["data"] == "&" or currentToken["data"] == "|" or currentToken["data"] == "^" or currentToken["data"] == "<<" or currentToken["data"] == ">>") do
+			local token = currentToken
 			
-			if (data == "*") then
-				eat("operator")
-			elseif (data == "/") then
-				eat("operator")
-			elseif (data == "^") then
-				eat("operator")
-			elseif (data == "%") then
-				eat("operator")
-			end
+			eat("operator")
 			
 			node = {
 				["nodeType"] = "BinOp",
@@ -113,13 +133,9 @@ return function(tokens)
 		local node = term()
 		
 		while (currentToken["type"] == "operator" and currentToken["data"] == "+" or currentToken["data"] == "-") do
-			local token, data = currentToken, currentToken["data"]
+			local token = currentToken
 			
-			if (data == "+") then
-				eat("operator")
-			elseif (data == "-") then
-				eat("operator")
-			end
+			eat("operator")
 			
 			node = {
 				["nodeType"] = "BinOp",
@@ -136,7 +152,7 @@ return function(tokens)
 		local node = addExpression()
 		
 		while (currentToken["type"] == "compare") do
-			local token, data = currentToken, currentToken["data"]
+			local token = currentToken
 			
 			eat("compare")
 							
@@ -151,11 +167,11 @@ return function(tokens)
 		return node
 	end
 	
-	local function expression()
+	function expression()
 		local node = compareExpression()
 		
 		while (currentToken["type"] == "compareop") do
-			local token, data = currentToken, currentToken["data"]
+			local token = currentToken
 			
 			eat("compareop")
 							
@@ -173,9 +189,9 @@ return function(tokens)
 	function variableStatement(v)				
 		local node = {
 			["nodeType"] = "Variable",
-			["value"] = v or currentToken,
+			["value"] = v or currentToken
 		}
-		
+
 		if (v == nil) then
 			eat("iden")
 		end
@@ -200,7 +216,8 @@ return function(tokens)
 					eat("other")
 					
 					local nvar = {
-						["nodeType"] = "Pass",
+						["nodeType"] = "Constant",
+						["type"] = currentToken["type"],
 						["value"] = currentToken
 					}
 					
@@ -232,29 +249,11 @@ return function(tokens)
 	
 	function createNewStatement()
 		eat("keyword")
-		
-		local class, run, arguments = variableStatement(), true, {}
-		
-		eat("other", "(")
-		
-		while (run) do
-			if (currentToken["data"] == ")") then
-				eat("other")
-		
-				run = false
-			else
-				table.insert(arguments, expression())
 				
-				if (currentToken["data"] == ",") then
-					eat("other", ",")
-				end
-			end
-		end
-	
 		return {
 			["nodeType"] = "New",
-			["variable"] = class,
-			["arguments"] = arguments
+			["variable"] = variableStatement(),
+			["arguments"] = eatArguments()
 		}
 	end
 	
@@ -273,24 +272,8 @@ return function(tokens)
 	
 	function callFunction(var)
 		local varStat = var or variableStatement()
-								
-		eat("other", "(")
-		
-		local run, arguments = true, { }
-		
-		while (run) do
-			if (currentToken["data"] == ")") then
-				run = false
-				
-				eat("other")
-			else
-				table.insert(arguments, expression())
-				
-				if (currentToken["data"] == ",") then
-					eat("other")
-				end
-			end
-		end
+										
+		local arguments = eatArguments()
 		
 		if (currentToken["data"] == ".") then
 			local var = variableStatement({
@@ -331,7 +314,7 @@ return function(tokens)
 		return statements
 	end
 			
-	local function eatArguments()
+	function eatArguments()
 		eat("other", "(")
 			
 		local run, arguments = true, { }
@@ -342,10 +325,8 @@ return function(tokens)
 				
 				eat("other")
 			else
-				arguments[#arguments + 1] = currentToken["data"]
-				
-				eat("iden")
-			
+				arguments[#arguments + 1] = expression()
+							
 				if (currentToken["data"] == ",") then
 					eat("other", ",")
 				end
@@ -568,7 +549,7 @@ return function(tokens)
 		}
 	end
 		
-	function listStatement()
+	function dictionaryStatement()
 		eat("other", "{")
 			
 		if (currentToken["type"] == "statement") then
@@ -596,7 +577,7 @@ return function(tokens)
 		end
 		
 		return {
-			["nodeType"] = "List",
+			["nodeType"] = "Dictionary",
 			["elements"] = elements
 		}
 	end
@@ -616,7 +597,7 @@ return function(tokens)
 				
 				run = false
 			else
-				table.insert(elements, expression())
+				elements[#elements + 1] = expression()
 				
 				if (currentToken["data"] == ",") then
 					eat("other")
@@ -658,6 +639,10 @@ return function(tokens)
 				return typeStatement()
 			elseif (data == "return") then
 				return returnStatement()
+			elseif (data == "local") then
+				eat("keyword")
+				
+				return assignStatement(nil, true)
 			end	
 		end
 			
@@ -673,7 +658,7 @@ return function(tokens)
 		while (currentToken["type"] == "statement" and currentIndex ~= #tokens) do
 			eat("statement")
 			
-			table.insert(results, statement())			
+			results[#results + 1] = statement()
 		end
 		
 		return results
@@ -687,6 +672,6 @@ return function(tokens)
 	for index, _ in pairs(nodes) do
 		root.children[#root.children + 1] = nodes[index]
 	end
-					
+						
 	return root
 end
